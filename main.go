@@ -48,6 +48,9 @@ func main() {
 					slog.Error("Error reposting zoom link", "channel_id", channelID, "error", err)
 				}
 			}
+			if err := bot.MarkChannelRead(baseUrl, token, item.Channel.ID); err != nil {
+				slog.Error("Error marking channel read", "channel_id", item.Channel.ID, "error", err)
+			}
 		}
 	}
 

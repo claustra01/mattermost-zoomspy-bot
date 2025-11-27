@@ -127,6 +127,29 @@ func GetUnreadZoomPosts(baseUrl string, token string) ([]ChannelUnread, error) {
 	return filtered, nil
 }
 
+func MarkChannelRead(baseUrl string, token string, channelID string) error {
+	payload := map[string]string{
+		"channel_id": channelID,
+	}
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal mark read payload: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/api/v4/channels/members/me/view", trimBaseURL(baseUrl))
+	resp, err := makeRequest(http.MethodPost, url, token, bytes.NewBuffer(data))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to mark channel read: status %d body %s", resp.StatusCode, string(body))
+	}
+	return nil
+}
+
 func fetchTeams(baseUrl string, token string) ([]Team, error) {
 	url := fmt.Sprintf("%s/api/v4/users/me/teams", trimBaseURL(baseUrl))
 	resp, err := makeRequest("GET", url, token, nil)
