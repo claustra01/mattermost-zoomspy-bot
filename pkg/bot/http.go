@@ -106,6 +106,32 @@ func GetUnreadPosts(baseUrl string, token string) ([]ChannelUnread, error) {
 	return unread, nil
 }
 
+func GetUnreadZoomPosts(baseUrl string, token string) ([]ChannelUnread, error) {
+	unread, err := GetUnreadPosts(baseUrl, token)
+	if err != nil {
+		return nil, err
+	}
+
+	var filtered []ChannelUnread
+	for _, item := range unread {
+		var posts []Post
+		for _, post := range item.Posts {
+			if HasZoomURL(post.Message) {
+				posts = append(posts, post)
+			}
+		}
+		if len(posts) == 0 {
+			continue
+		}
+		filtered = append(filtered, ChannelUnread{
+			Channel: item.Channel,
+			Posts:   posts,
+		})
+	}
+
+	return filtered, nil
+}
+
 func fetchTeams(baseUrl string, token string) ([]Team, error) {
 	url := fmt.Sprintf("%s/api/v4/users/me/teams", trimBaseURL(baseUrl))
 	resp, err := makeRequest("GET", url, token, nil)

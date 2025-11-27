@@ -26,14 +26,14 @@ func main() {
 		}
 		slog.Info("Fetched channels", "count", len(channels))
 
-		unread, err := bot.GetUnreadPosts(baseUrl, token)
+		unread, err := bot.GetUnreadZoomPosts(baseUrl, token)
 		if err != nil {
-			slog.Error("Error fetching unread posts", "error", err)
+			slog.Error("Error fetching zoom posts", "error", err)
 			return
 		}
 
 		for _, item := range unread {
-			slog.Info("Unread posts found", "channel_id", item.Channel.ID, "channel", item.Channel.DisplayName, "count", len(item.Posts))
+			slog.Info("Zoom posts found", "channel_id", item.Channel.ID, "channel", item.Channel.DisplayName, "count", len(item.Posts))
 			for _, post := range item.Posts {
 				slog.Info("Post", "channel_id", item.Channel.ID, "post_id", post.ID, "user_id", post.UserID, "created_at", post.CreateAt, "message", post.Message)
 			}
