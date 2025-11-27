@@ -18,7 +18,7 @@ func (c *Client) PostMessage(channelID string, message string) error {
 		RootID:    nil,
 		FileIDs:   []string{},
 	}
-	buf, err := MarshalCreatePostReqBody(body)
+	buf, err := marshalJSON(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
