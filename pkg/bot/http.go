@@ -173,6 +173,7 @@ func (c *Client) fetchTeams() ([]Team, error) {
 
 	for _, team := range teams {
 		if team.ID == c.teamID {
+			c.teamName = team.Name
 			return []Team{team}, nil
 		}
 	}

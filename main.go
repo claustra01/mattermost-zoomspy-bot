@@ -51,7 +51,7 @@ func main() {
 			slog.Info("Zoom posts found", "channel_id", item.Channel.ID, "channel", item.Channel.DisplayName, "count", len(item.Posts))
 			for _, post := range item.Posts {
 				slog.Info("Post", "channel_id", item.Channel.ID, "post_id", post.ID, "user_id", post.UserID, "created_at", post.CreateAt, "message", post.Message)
-				permalink := util.BuildPostURL(baseUrl, post.ID)
+				permalink := util.BuildPostURL(baseUrl, client.TeamName(), post.ID)
 				msg := fmt.Sprintf("[%s] %s", item.Channel.DisplayName, permalink)
 				if err := client.PostMessage(channelID, msg); err != nil {
 					slog.Error("Error reposting zoom link", "channel_id", channelID, "error", err)

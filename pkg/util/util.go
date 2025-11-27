@@ -12,6 +12,10 @@ func HasZoomURL(message string) bool {
 	return zoomURLRegex.MatchString(message) && !zoomArchiveRegex.MatchString(message)
 }
 
-func BuildPostURL(baseUrl string, postID string) string {
-	return strings.TrimSuffix(baseUrl, "/") + "/pl/" + postID
+func BuildPostURL(baseUrl string, teamName string, postID string) string {
+	base := strings.TrimSuffix(baseUrl, "/")
+	if teamName == "" {
+		return base + "/pl/" + postID
+	}
+	return base + "/" + strings.Trim(teamName, "/") + "/pl/" + postID
 }
