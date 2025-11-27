@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"time"
 )
 
 func PostMessage(baseUrl string, channelID string, token string, message string) error {
@@ -84,6 +85,8 @@ func (c *Client) GetUnreadPosts() ([]ChannelUnread, error) {
 		return nil, err
 	}
 
+	cutoff := time.Now().Add(-time.Hour).UnixMilli()
+
 	var unread []ChannelUnread
 	for _, channel := range channels {
 		member, err := c.fetchChannelMember(channel.ID)
@@ -96,13 +99,20 @@ func (c *Client) GetUnreadPosts() ([]ChannelUnread, error) {
 			return nil, fmt.Errorf("failed to fetch posts for channel %s: %w", channel.ID, err)
 		}
 
-		if len(posts) == 0 {
+		var recentPosts []Post
+		for _, post := range posts {
+			if post.CreateAt >= cutoff {
+				recentPosts = append(recentPosts, post)
+			}
+		}
+
+		if len(recentPosts) == 0 {
 			continue
 		}
 
 		unread = append(unread, ChannelUnread{
 			Channel: channel,
-			Posts:   posts,
+			Posts:   recentPosts,
 		})
 	}
 
