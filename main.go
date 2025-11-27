@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -11,6 +12,11 @@ func main() {
 	baseUrl := os.Getenv("MATTERMOST_BASE_URL")
 	if baseUrl == "" {
 		panic("MATTERMOST_BASE_URL is not set")
+	}
+
+	channelID := os.Getenv("MATTERMOST_CHANNEL_ID")
+	if channelID == "" {
+		panic("MATTERMOST_CHANNEL_ID is not set")
 	}
 
 	token := os.Getenv("MATTERMOST_TOKEN")
@@ -36,6 +42,11 @@ func main() {
 			slog.Info("Zoom posts found", "channel_id", item.Channel.ID, "channel", item.Channel.DisplayName, "count", len(item.Posts))
 			for _, post := range item.Posts {
 				slog.Info("Post", "channel_id", item.Channel.ID, "post_id", post.ID, "user_id", post.UserID, "created_at", post.CreateAt, "message", post.Message)
+				permalink := bot.BuildPostURL(baseUrl, post.ID)
+				msg := fmt.Sprintf("[%s] %s", item.Channel.DisplayName, permalink)
+				if err := bot.PostMessage(baseUrl, channelID, token, msg); err != nil {
+					slog.Error("Error reposting zoom link", "channel_id", channelID, "error", err)
+				}
 			}
 		}
 	}

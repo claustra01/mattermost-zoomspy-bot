@@ -11,11 +11,7 @@ import (
 	"time"
 )
 
-func PostMessage(baseUrl string, channelID string, token string) error {
-	// create message
-	message := "test message"
-
-	// create request body
+func PostMessage(baseUrl string, channelID string, token string, message string) error {
 	body := CreatePostRequestBody{
 		ChannelID: channelID,
 		Message:   message,
@@ -27,8 +23,7 @@ func PostMessage(baseUrl string, channelID string, token string) error {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	// create request
-	url := fmt.Sprintf("%s/api/v4/posts", baseUrl)
+	url := fmt.Sprintf("%s/api/v4/posts", trimBaseURL(baseUrl))
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)

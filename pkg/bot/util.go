@@ -3,6 +3,7 @@ package bot
 import (
 	"encoding/json"
 	"regexp"
+	"strings"
 )
 
 type CreatePostRequestBody struct {
@@ -24,4 +25,8 @@ func MarshalCreatePostReqBody(body CreatePostRequestBody) ([]byte, error) {
 
 func HasZoomURL(message string) bool {
 	return zoomURLRegex.MatchString(message)
+}
+
+func BuildPostURL(baseUrl string, postID string) string {
+	return strings.TrimSuffix(baseUrl, "/") + "/pl/" + postID
 }
