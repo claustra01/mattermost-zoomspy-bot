@@ -40,3 +40,10 @@ type ChannelUnread struct {
 	Channel Channel
 	Posts   []Post
 }
+
+type CreatePostRequestBody struct {
+	ChannelID string   `json:"channel_id"`
+	Message   string   `json:"message"`
+	RootID    *string  `json:"root_id"`
+	FileIDs   []string `json:"file_ids"`
+}

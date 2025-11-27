@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/claustra01/mattermost-zoomspy-bot/pkg/util"
 )
 
 // Client methods
@@ -109,7 +111,7 @@ func (c *Client) GetUnreadZoomPosts() ([]ChannelUnread, error) {
 	for _, item := range unread {
 		var posts []Post
 		for _, post := range item.Posts {
-			if HasZoomURL(post.Message) {
+			if util.HasZoomURL(post.Message) {
 				posts = append(posts, post)
 			}
 		}
