@@ -13,21 +13,30 @@ func main() {
 		panic("MATTERMOST_BASE_URL is not set")
 	}
 
-	channelID := os.Getenv("MATTERMOST_CHANNEL_ID")
-	if channelID == "" {
-		panic("MATTERMOST_CHANNEL_ID is not set")
-	}
-
 	token := os.Getenv("MATTERMOST_TOKEN")
 	if token == "" {
 		panic("MATTERMOST_TOKEN is not set")
 	}
 
 	job := func() {
-		err := bot.PostMessage(baseUrl, channelID, token)
+		channels, err := bot.GetUserChannels(baseUrl, token)
 		if err != nil {
-			slog.Error("Error posting message:", "ERROR", err)
+			slog.Error("Error fetching channels", "error", err)
 			return
+		}
+		slog.Info("Fetched channels", "count", len(channels))
+
+		unread, err := bot.GetUnreadPosts(baseUrl, token)
+		if err != nil {
+			slog.Error("Error fetching unread posts", "error", err)
+			return
+		}
+
+		for _, item := range unread {
+			slog.Info("Unread posts found", "channel_id", item.Channel.ID, "channel", item.Channel.DisplayName, "count", len(item.Posts))
+			for _, post := range item.Posts {
+				slog.Info("Post", "channel_id", item.Channel.ID, "post_id", post.ID, "user_id", post.UserID, "created_at", post.CreateAt, "message", post.Message)
+			}
 		}
 	}
 
