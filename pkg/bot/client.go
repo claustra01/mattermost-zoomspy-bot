@@ -13,6 +13,7 @@ import (
 type Client struct {
 	baseURL    string
 	token      string
+	teamID     string
 	httpClient *http.Client
 }
 
@@ -20,6 +21,7 @@ func NewClient(baseURL string, token string) *Client {
 	return &Client{
 		baseURL:    trimBaseURL(baseURL),
 		token:      token,
+		teamID:     "",
 		httpClient: &http.Client{Timeout: 15 * time.Second},
 	}
 }
@@ -27,6 +29,12 @@ func NewClient(baseURL string, token string) *Client {
 func (c *Client) WithHTTPClient(hc *http.Client) *Client {
 	copy := *c
 	copy.httpClient = hc
+	return &copy
+}
+
+func (c *Client) WithTeam(teamID string) *Client {
+	copy := *c
+	copy.teamID = teamID
 	return &copy
 }
 

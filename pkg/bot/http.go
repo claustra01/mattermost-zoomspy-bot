@@ -13,16 +13,16 @@ func PostMessage(baseUrl string, channelID string, token string, message string)
 	return NewClient(baseUrl, token).PostMessage(channelID, message)
 }
 
-func GetUserChannels(baseUrl string, token string) ([]Channel, error) {
-	return NewClient(baseUrl, token).GetUserChannels()
+func GetUserChannels(baseUrl string, token string, teamID string) ([]Channel, error) {
+	return NewClient(baseUrl, token).WithTeam(teamID).GetUserChannels()
 }
 
-func GetUnreadPosts(baseUrl string, token string) ([]ChannelUnread, error) {
-	return NewClient(baseUrl, token).GetUnreadPosts()
+func GetUnreadPosts(baseUrl string, token string, teamID string) ([]ChannelUnread, error) {
+	return NewClient(baseUrl, token).WithTeam(teamID).GetUnreadPosts()
 }
 
-func GetUnreadZoomPosts(baseUrl string, token string) ([]ChannelUnread, error) {
-	return NewClient(baseUrl, token).GetUnreadZoomPosts()
+func GetUnreadZoomPosts(baseUrl string, token string, teamID string) ([]ChannelUnread, error) {
+	return NewClient(baseUrl, token).WithTeam(teamID).GetUnreadZoomPosts()
 }
 
 func MarkChannelRead(baseUrl string, token string, channelID string) error {
@@ -185,7 +185,17 @@ func (c *Client) fetchTeams() ([]Team, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&teams); err != nil {
 		return nil, fmt.Errorf("failed to decode teams response: %w", err)
 	}
-	return teams, nil
+	if c.teamID == "" {
+		return nil, fmt.Errorf("team ID is required")
+	}
+
+	for _, team := range teams {
+		if team.ID == c.teamID {
+			return []Team{team}, nil
+		}
+	}
+
+	return nil, fmt.Errorf("team %s not found in user teams", c.teamID)
 }
 
 func (c *Client) fetchTeamChannels(teamID string) ([]Channel, error) {

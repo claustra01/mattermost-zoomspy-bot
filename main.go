@@ -24,15 +24,22 @@ func main() {
 		panic("MATTERMOST_TOKEN is not set")
 	}
 
+	teamID := os.Getenv("MATTERMOST_TEAM_ID")
+	if teamID == "" {
+		panic("MATTERMOST_TEAM_ID is not set")
+	}
+
+	client := bot.NewClient(baseUrl, token).WithTeam(teamID)
+
 	job := func() {
-		channels, err := bot.GetUserChannels(baseUrl, token)
+		channels, err := client.GetUserChannels()
 		if err != nil {
 			slog.Error("Error fetching channels", "error", err)
 			return
 		}
 		slog.Info("Fetched channels", "count", len(channels))
 
-		unread, err := bot.GetUnreadZoomPosts(baseUrl, token)
+		unread, err := client.GetUnreadZoomPosts()
 		if err != nil {
 			slog.Error("Error fetching zoom posts", "error", err)
 			return
@@ -48,7 +55,7 @@ func main() {
 					slog.Error("Error reposting zoom link", "channel_id", channelID, "error", err)
 				}
 			}
-			if err := bot.MarkChannelRead(baseUrl, token, item.Channel.ID); err != nil {
+			if err := client.MarkChannelRead(item.Channel.ID); err != nil {
 				slog.Error("Error marking channel read", "channel_id", item.Channel.ID, "error", err)
 			}
 		}
