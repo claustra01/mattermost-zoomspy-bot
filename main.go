@@ -29,7 +29,7 @@ func main() {
 		panic("MATTERMOST_TEAM_ID is not set")
 	}
 
-	client := bot.NewClient(baseUrl, token).WithTeam(teamID)
+	client := bot.NewClient(baseUrl, token, teamID)
 
 	job := func() {
 		channels, err := client.GetUserChannels()
@@ -51,7 +51,7 @@ func main() {
 				slog.Info("Post", "channel_id", item.Channel.ID, "post_id", post.ID, "user_id", post.UserID, "created_at", post.CreateAt, "message", post.Message)
 				permalink := bot.BuildPostURL(baseUrl, post.ID)
 				msg := fmt.Sprintf("[%s] %s", item.Channel.DisplayName, permalink)
-				if err := bot.PostMessage(baseUrl, channelID, token, msg); err != nil {
+				if err := client.PostMessage(channelID, msg); err != nil {
 					slog.Error("Error reposting zoom link", "channel_id", channelID, "error", err)
 				}
 			}
