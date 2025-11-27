@@ -7,6 +7,7 @@ import (
 
 	"github.com/claustra01/mattermost-zoomspy-bot/pkg/bot"
 	"github.com/claustra01/mattermost-zoomspy-bot/pkg/util"
+	"github.com/robfig/cron/v3"
 )
 
 func main() {
@@ -62,11 +63,9 @@ func main() {
 		}
 	}
 
-	job()
+	c := cron.New()
+	c.AddFunc("*/10 * * * *", job)
+	c.Start()
 
-	// c := cron.New()
-	// c.AddFunc("* * * * *", job)
-	// c.Start()
-
-	// select {}
+	select {}
 }
