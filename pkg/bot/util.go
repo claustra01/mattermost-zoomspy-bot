@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"bytes"
 	"encoding/json"
 	"regexp"
 	"strings"
@@ -15,12 +16,12 @@ type CreatePostRequestBody struct {
 
 var zoomURLRegex = regexp.MustCompile(`https?://[^\s]*zoom\.(us|com|gov)/[^\s]*`)
 
-func MarshalCreatePostReqBody(body CreatePostRequestBody) ([]byte, error) {
+func MarshalCreatePostReqBody(body CreatePostRequestBody) (*bytes.Buffer, error) {
 	raw, err := json.Marshal(body)
 	if err != nil {
-		return raw, err
+		return nil, err
 	}
-	return raw, nil
+	return bytes.NewBuffer(raw), nil
 }
 
 func HasZoomURL(message string) bool {

@@ -1,42 +1,50 @@
 package bot
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"strings"
-	"time"
 )
 
 func PostMessage(baseUrl string, channelID string, token string, message string) error {
+	return NewClient(baseUrl, token).PostMessage(channelID, message)
+}
+
+func GetUserChannels(baseUrl string, token string) ([]Channel, error) {
+	return NewClient(baseUrl, token).GetUserChannels()
+}
+
+func GetUnreadPosts(baseUrl string, token string) ([]ChannelUnread, error) {
+	return NewClient(baseUrl, token).GetUnreadPosts()
+}
+
+func GetUnreadZoomPosts(baseUrl string, token string) ([]ChannelUnread, error) {
+	return NewClient(baseUrl, token).GetUnreadZoomPosts()
+}
+
+func MarkChannelRead(baseUrl string, token string, channelID string) error {
+	return NewClient(baseUrl, token).MarkChannelRead(channelID)
+}
+
+// Client methods
+
+func (c *Client) PostMessage(channelID string, message string) error {
 	body := CreatePostRequestBody{
 		ChannelID: channelID,
 		Message:   message,
 		RootID:    nil,
 		FileIDs:   []string{},
 	}
-	data, err := MarshalCreatePostReqBody(body)
+	buf, err := MarshalCreatePostReqBody(body)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request body: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/api/v4/posts", trimBaseURL(baseUrl))
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	resp, err := c.do(http.MethodPost, "/api/v4/posts", buf)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-
-	// send request
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to send request: %w", err)
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -49,19 +57,19 @@ func PostMessage(baseUrl string, channelID string, token string, message string)
 		return fmt.Errorf("error reading response: %w", err)
 	}
 
-	slog.Info("Response:", "URL", url, "Body", string(respBody))
+	slog.Info("Response:", "Body", string(respBody))
 	return nil
 }
 
-func GetUserChannels(baseUrl string, token string) ([]Channel, error) {
-	teams, err := fetchTeams(baseUrl, token)
+func (c *Client) GetUserChannels() ([]Channel, error) {
+	teams, err := c.fetchTeams()
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch teams: %w", err)
 	}
 
 	var channels []Channel
 	for _, team := range teams {
-		teamChannels, err := fetchTeamChannels(baseUrl, token, team.ID)
+		teamChannels, err := c.fetchTeamChannels(team.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch channels for team %s: %w", team.ID, err)
 		}
@@ -70,20 +78,20 @@ func GetUserChannels(baseUrl string, token string) ([]Channel, error) {
 	return channels, nil
 }
 
-func GetUnreadPosts(baseUrl string, token string) ([]ChannelUnread, error) {
-	channels, err := GetUserChannels(baseUrl, token)
+func (c *Client) GetUnreadPosts() ([]ChannelUnread, error) {
+	channels, err := c.GetUserChannels()
 	if err != nil {
 		return nil, err
 	}
 
 	var unread []ChannelUnread
 	for _, channel := range channels {
-		member, err := fetchChannelMember(baseUrl, token, channel.ID)
+		member, err := c.fetchChannelMember(channel.ID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch membership for channel %s: %w", channel.ID, err)
 		}
 
-		posts, err := fetchPostsSince(baseUrl, token, channel.ID, member.LastViewedAt)
+		posts, err := c.fetchPostsSince(channel.ID, member.LastViewedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch posts for channel %s: %w", channel.ID, err)
 		}
@@ -101,8 +109,8 @@ func GetUnreadPosts(baseUrl string, token string) ([]ChannelUnread, error) {
 	return unread, nil
 }
 
-func GetUnreadZoomPosts(baseUrl string, token string) ([]ChannelUnread, error) {
-	unread, err := GetUnreadPosts(baseUrl, token)
+func (c *Client) GetUnreadZoomPosts() ([]ChannelUnread, error) {
+	unread, err := c.GetUnreadPosts()
 	if err != nil {
 		return nil, err
 	}
@@ -127,17 +135,16 @@ func GetUnreadZoomPosts(baseUrl string, token string) ([]ChannelUnread, error) {
 	return filtered, nil
 }
 
-func MarkChannelRead(baseUrl string, token string, channelID string) error {
+func (c *Client) MarkChannelRead(channelID string) error {
 	payload := map[string]string{
 		"channel_id": channelID,
 	}
-	data, err := json.Marshal(payload)
+	buf, err := marshalJSON(payload)
 	if err != nil {
-		return fmt.Errorf("failed to marshal mark read payload: %w", err)
+		return err
 	}
 
-	url := fmt.Sprintf("%s/api/v4/channels/members/me/view", trimBaseURL(baseUrl))
-	resp, err := makeRequest(http.MethodPost, url, token, bytes.NewBuffer(data))
+	resp, err := c.do(http.MethodPost, "/api/v4/channels/members/me/view", buf)
 	if err != nil {
 		return err
 	}
@@ -150,9 +157,10 @@ func MarkChannelRead(baseUrl string, token string, channelID string) error {
 	return nil
 }
 
-func fetchTeams(baseUrl string, token string) ([]Team, error) {
-	url := fmt.Sprintf("%s/api/v4/users/me/teams", trimBaseURL(baseUrl))
-	resp, err := makeRequest("GET", url, token, nil)
+// Internal helpers
+
+func (c *Client) fetchTeams() ([]Team, error) {
+	resp, err := c.do(http.MethodGet, "/api/v4/users/me/teams", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -170,9 +178,8 @@ func fetchTeams(baseUrl string, token string) ([]Team, error) {
 	return teams, nil
 }
 
-func fetchTeamChannels(baseUrl string, token string, teamID string) ([]Channel, error) {
-	url := fmt.Sprintf("%s/api/v4/users/me/teams/%s/channels", trimBaseURL(baseUrl), teamID)
-	resp, err := makeRequest("GET", url, token, nil)
+func (c *Client) fetchTeamChannels(teamID string) ([]Channel, error) {
+	resp, err := c.do(http.MethodGet, fmt.Sprintf("/api/v4/users/me/teams/%s/channels", teamID), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -190,9 +197,8 @@ func fetchTeamChannels(baseUrl string, token string, teamID string) ([]Channel, 
 	return channels, nil
 }
 
-func fetchChannelMember(baseUrl string, token string, channelID string) (ChannelMember, error) {
-	url := fmt.Sprintf("%s/api/v4/channels/%s/members/me", trimBaseURL(baseUrl), channelID)
-	resp, err := makeRequest("GET", url, token, nil)
+func (c *Client) fetchChannelMember(channelID string) (ChannelMember, error) {
+	resp, err := c.do(http.MethodGet, fmt.Sprintf("/api/v4/channels/%s/members/me", channelID), nil)
 	if err != nil {
 		return ChannelMember{}, err
 	}
@@ -210,9 +216,8 @@ func fetchChannelMember(baseUrl string, token string, channelID string) (Channel
 	return member, nil
 }
 
-func fetchPostsSince(baseUrl string, token string, channelID string, since int64) ([]Post, error) {
-	url := fmt.Sprintf("%s/api/v4/channels/%s/posts?since=%d", trimBaseURL(baseUrl), channelID, since)
-	resp, err := makeRequest("GET", url, token, nil)
+func (c *Client) fetchPostsSince(channelID string, since int64) ([]Post, error) {
+	resp, err := c.do(http.MethodGet, fmt.Sprintf("/api/v4/channels/%s/posts?since=%d", channelID, since), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -241,27 +246,4 @@ func fetchPostsSince(baseUrl string, token string, channelID string, since int64
 	}
 
 	return orderedPosts, nil
-}
-
-func makeRequest(method string, url string, token string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, url, body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-	if method == http.MethodPost {
-		req.Header.Set("Content-Type", "application/json")
-	}
-
-	client := &http.Client{Timeout: 15 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request failed: %w", err)
-	}
-	return resp, nil
-}
-
-func trimBaseURL(baseUrl string) string {
-	return strings.TrimSuffix(baseUrl, "/")
 }
