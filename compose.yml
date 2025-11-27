@@ -1,0 +1,7 @@
+services:
+  bot:
+    build: .
+    environment:
+      - MATTERMOST_BASE_URL=${MATTERMOST_BASE_URL}
+      - MATTERMOST_CHANNEL_ID=${MATTERMOST_CHANNEL_ID}
+      - MATTERMOST_TOKEN=${MATTERMOST_TOKEN}
